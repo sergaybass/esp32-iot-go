@@ -2,13 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>LED Control</title>
-  <link rel="stylesheet" href="style.css">
+  <title>ESP32 Monitoring</title>
+  <style>
+    .button-container {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .sensor-data {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 18px;
+    }
+  </style>
 </head>
 <body>
-  <h1>ESP32 LED Control</h1>
-  <button id="on">Turn ON</button>
-  <button id="off">Turn OFF</button>
+  <h1>ESP32 Monitoring</h1>
+  
+  <div class="button-container">
+    <button id="on">Turn ON</button>
+    <button id="off">Turn OFF</button>
+  </div>
+  
+  <div class="sensor-data">
+    <div>Температура: <span id="temperature">--</span>°C</div>
+    <div>Влажность: <span id="humidity">--</span>%</div>
+  </div>
+  
   <script src="script.js"></script>
 </body>
 </html>
