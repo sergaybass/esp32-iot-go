@@ -1,42 +1,50 @@
-import fetch from 'node-fetch';
+// Используем встроенный модуль 'https' вместо 'node-fetch'
+import https from 'https';
 
 export default async function handler(req, res) {
-  const AIO_USERNAME = process.env.AIO_USERNAME;
-  const AIO_KEY = process.env.AIO_KEY;
-  
-  // Замените на реальные имена feeds из Adafruit IO
-  const TEMP_FEED = 'temperature'; 
-  const HUMIDITY_FEED = 'humidity';
-
   try {
-    // 1. Запрос температуры
-    const tempRes = await fetch(
-      `https://io.adafruit.com/api/v2/${AIO_USERNAME}/feeds/${TEMP_FEED}/data/last`,
-      { headers: { 'X-AIO-Key': AIO_KEY } }
-    );
-    
-    if (!tempRes.ok) throw new Error('Temperature fetch failed');
-    const tempData = await tempRes.json();
-    const temperature = parseFloat(tempData.value);
+    // Проверяем переменные окружения
+    if (!process.env.AIO_USERNAME || !process.env.AIO_KEY) {
+      throw new Error("Adafruit IO credentials are missing!");
+    }
 
-    // 2. Запрос влажности
-    const humidityRes = await fetch(
-      `https://io.adafruit.com/api/v2/${AIO_USERNAME}/feeds/${HUMIDITY_FEED}/data/last`,
-      { headers: { 'X-AIO-Key': AIO_KEY } }
-    );
-    
-    if (!humidityRes.ok) throw new Error('Humidity fetch failed');
-    const humidityData = await humidityRes.json();
-    const humidity = parseFloat(humidityData.value);
+    const AIO_USERNAME = process.env.AIO_USERNAME;
+    const AIO_KEY = process.env.AIO_KEY;
+    const TEMP_FEED = "temperature"; // Замените на ваш feed key
+    const HUMIDITY_FEED = "humidity"; // Замените на ваш feed key
 
-    // 3. Отправка данных клиенту
-    res.status(200).json({ temperature, humidity });
+    // Функция для запроса данных из Adafruit IO
+    const fetchData = (feed) => new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'io.adafruit.com',
+        path: `/api/v2/${AIO_USERNAME}/feeds/${feed}/data/last`,
+        headers: { 'X-AIO-Key': AIO_KEY },
+      };
+
+      https.get(options, (apiRes) => {
+        let data = '';
+        apiRes.on('data', (chunk) => data += chunk);
+        apiRes.on('end', () => resolve(JSON.parse(data)));
+      }).on('error', reject);
+    });
+
+    // Параллельно запрашиваем температуру и влажность
+    const [tempData, humidityData] = await Promise.all([
+      fetchData(TEMP_FEED),
+      fetchData(HUMIDITY_FEED),
+    ]);
+
+    // Отправляем клиенту
+    res.status(200).json({
+      temperature: parseFloat(tempData.value),
+      humidity: parseFloat(humidityData.value),
+    });
 
   } catch (error) {
-    console.error('Adafruit IO Error:', error);
+    console.error('Error:', error);
     res.status(500).json({ 
-      error: 'Failed to fetch sensor data',
-      details: error.message 
+      error: 'Server error',
+      details: error.message,
     });
   }
 }
